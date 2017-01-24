@@ -20,6 +20,7 @@ RUN apt-get update \
        libevent-dev \
        libffi-dev \
        libglib2.0-dev \
+       libgconf2-dev \
        libjpeg-dev \
        libmagickcore-dev \
        libmagickwand-dev \
@@ -155,8 +156,8 @@ RUN apt-get update && apt-get install -y \
 #### Other tools
 
 # Install Chrome WebDriver
-ENV CHROMEDRIVER_VERSION 2.27
-RUN curl -SLO "http://chromedriver.storage.googleapis.com/$CHROMEDRIVER_VERSION/chromedriver_linux64.zip" \
+RUN CHROMEDRIVER_VERSION=$(curl http://chromedriver.storage.googleapis.com/LATEST_RELEASE) \
+  && curl -SLO "http://chromedriver.storage.googleapis.com/$CHROMEDRIVER_VERSION/chromedriver_linux64.zip" \
   && unzip chromedriver_linux64.zip -d /usr/local/bin \
   && rm chromedriver_linux64.zip
 
