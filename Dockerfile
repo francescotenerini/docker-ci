@@ -50,7 +50,6 @@ RUN apt-get update \
        shared-mime-info \
        zlib1g-dev \
        unzip \
-       python-lxml \
        python-dev \
        python-pip \
        python3-dev \
