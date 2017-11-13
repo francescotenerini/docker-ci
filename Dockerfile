@@ -1,12 +1,6 @@
 FROM ubuntu:16.04
 MAINTAINER Evoniners <dev@evonove.it>
 
-# set the locale
-RUN locale-gen en_US.UTF-8
-ENV LANG en_US.UTF-8
-ENV LANGUAGE en_US:en
-ENV LC_ALL en_US.UTF-8
-
 # Update the system with build-in dependencies
 RUN apt-get update \
   && apt-get upgrade -y \
@@ -45,6 +39,7 @@ RUN apt-get update \
        libpcap-dev \
        liblzma-dev \
        libpcre3-dev \
+       locales \
        postgresql-client \
        imagemagick \
        shared-mime-info \
@@ -58,6 +53,12 @@ RUN apt-get update \
        chromium-browser \
        xvfb \
   && rm -rf /var/lib/apt/lists/*
+
+# set the locale
+RUN locale-gen en_US.UTF-8
+ENV LANG en_US.UTF-8
+ENV LANGUAGE en_US:en
+ENV LC_ALL en_US.UTF-8
 
 # Install GDAL, PROJ.4 dependencies of PostGIS
 # Install libgdal-dev that provides gdal-config
@@ -123,18 +124,13 @@ ENV NODE_PATH /usr/local/lib/node_modules/
 ENV NPM_VERSION 4.0.5
 
 # gpg keys listed at https://github.com/nodejs/node
-RUN set -ex \
-  && for key in \
-    9554F04D7259F04124DE6B476D5A82AC7E37093B \
-    94AE36675C464D64BAFA68DD7434390BDBE9B9C5 \
-    FD3A5288F042B6850C66B31F09FE44734EB7990E \
-    71DCFD284A79C3B38668286BC97EC7A07EDE3FC1 \
-    DD8F2338BAE7501E3DD5AC78C273792F7D83545D \
-    B9AE9905FFD7803F25714661B63B535A4C206CA9 \
-    C4F0DFFF4E8C1A8236409D08E73BC641CC11F4C8 \
-  ; do \
-    gpg --keyserver ha.pool.sks-keyservers.net --recv-keys "$key"; \
-  done
+RUN gpg --keyserver pool.sks-keyservers.net --recv-keys 94AE36675C464D64BAFA68DD7434390BDBE9B9C5
+RUN gpg --keyserver pool.sks-keyservers.net --recv-keys FD3A5288F042B6850C66B31F09FE44734EB7990E
+RUN gpg --keyserver pool.sks-keyservers.net --recv-keys 71DCFD284A79C3B38668286BC97EC7A07EDE3FC1
+RUN gpg --keyserver pool.sks-keyservers.net --recv-keys DD8F2338BAE7501E3DD5AC78C273792F7D83545D
+RUN gpg --keyserver pool.sks-keyservers.net --recv-keys C4F0DFFF4E8C1A8236409D08E73BC641CC11F4C8
+RUN gpg --keyserver pool.sks-keyservers.net --recv-keys B9AE9905FFD7803F25714661B63B535A4C206CA9
+RUN gpg --keyserver pool.sks-keyservers.net --recv-keys 56730D5401028683275BD23C23EFEFE93C4CFFFE
 
 # frontend toolchain (node)
 RUN curl -SLO "https://nodejs.org/dist/v$NODE_VERSION/node-v$NODE_VERSION-linux-x64.tar.gz" \
@@ -169,6 +165,28 @@ RUN mv /usr/bin/chromium-browser /usr/bin/chromium-browser.ori \
   && echo 'exec -a "$0" "/usr/bin/chromium-browser.ori" --no-sandbox "$@"' >> \
     /usr/bin/chromium-browser \
   && chmod +x /usr/bin/chromium-browser
+
+# Rust environment
+ENV RUST_VERSION 1.19.0
+ENV CARGO_HOME /opt/cargo
+ENV RUSTUP_HOME /opt/rustup
+RUN mkdir $CARGO_HOME && \
+    mkdir $RUSTUP_HOME && \
+    chown -R jenkins $CARGO_HOME && \
+    chown -R jenkins $RUSTUP_HOME && \
+    curl -o $CARGO_HOME/rustup-init -sO https://static.rust-lang.org/rustup/dist/x86_64-unknown-linux-gnu/rustup-init && \
+    chmod +x $CARGO_HOME/rustup-init && \
+    $CARGO_HOME/rustup-init -y --default-toolchain $RUST_VERSION && \
+    rm $CARGO_HOME/rustup-init
+ENV PATH $PATH:$CARGO_HOME/bin
+
+# librdkafka
+ENV RDKAFKA_VERSION=0.11.0
+
+# Install librdkafka
+RUN curl -o /root/librdkafka-${RDKAFKA_VERSION}.tar.gz -SL https://github.com/edenhill/librdkafka/archive/v${RDKAFKA_VERSION}.tar.gz && \
+    tar -xzf /root/librdkafka-${RDKAFKA_VERSION}.tar.gz -C /root && \
+    cd /root/librdkafka-${RDKAFKA_VERSION} && ./configure --prefix=/usr && make && make install
 
 USER jenkins
 
